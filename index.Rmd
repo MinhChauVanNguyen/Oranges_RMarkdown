@@ -1,0 +1,22 @@
+---
+title: "Data Introduction"
+author: "_Minh Chau Van Nguyen_"
+output: 
+ html_document:
+    toc: TRUE
+    toc_depth: 2
+    toc_float: 
+     smooth_scroll: TRUE
+---
+
+******
+
+# SUMMARY
+1. [Tab One](00-Tab-1.html)
+2. [Tab Two](01-Tab-2.html)
+
+
+
+
+```{r, child="_page_built_on.Rmd"}
+```

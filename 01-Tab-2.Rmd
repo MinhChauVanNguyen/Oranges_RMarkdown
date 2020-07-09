@@ -1,0 +1,558 @@
+---
+title: "Second Report"
+author: "_Minh Chau Van Nguyen_"
+output: 
+ html_document:
+    toc: TRUE
+    toc_depth: 4
+    toc_float: 
+     smooth_scroll: TRUE
+---
+
+******
+
+<style>
+.blackbox {
+  padding: 1em;
+  background: white;
+  color: black;
+  border: 2px solid #3399CC;
+  border-radius: 10px;
+}
+.center {
+  text-align: center;
+}
+table {
+  background-color: white !important;
+  color: black !important;
+}
+.navbar navbar-default navbar-fixed-top{
+    background-color: pink;
+}
+div.blue pre { background-color:lightblue; }
+div.blue pre.r { background-color:lavender; }
+</style>
+
+<div class = "blue">
+
+```{r echo = FALSE, purl = FALSE, message = FALSE, warning = FALSE}
+library(xts); library(forecast); library(quantmod); library(ggplot2); library(caret)
+library(seasonal); library(imputeTS); library(fabletools); library(urca); library(tidyverse); library(scales); library(dygraphs); library(DBI); library(RSQLite); library(knitr); library(DT); library(bookdown); library(grid)
+library(gridExtra); library(checkdown); library(kableExtra)
+
+my_theme <- function(...) {
+  theme(
+    axis.line = element_line(color = "black"), 
+    axis.text.x = element_text(color = "black", size = 12, lineheight = 0.9),  
+    axis.text.y = element_text(color = "black", size = 12, lineheight = 0.9),  
+    axis.ticks = element_line(color = "black", size = 0.5),  
+    axis.title.x = element_text(color = "black", margin = margin(0, 10, 0, 0), size = 12),  
+    axis.title.y = element_text(color = "black", angle = 90, margin = margin(0, 10, 0, 0), size = 12),  
+    axis.ticks.length = unit(0.5, "lines"), 
+    legend.background = element_rect(color = NULL, fill = "white"),  
+    legend.key = element_rect(color = "black",  fill = "white"),  
+    legend.key.size = unit(1.2, "lines"),  
+    legend.key.height = NULL,  
+    legend.key.width = NULL,      
+    legend.text = element_text(color = "black"),  
+    legend.title = element_text(face = "bold", hjust = 0, color = "black"),  
+    legend.text.align = NULL,  
+    legend.title.align = NULL,  
+    legend.direction = "vertical",  
+    legend.box = NULL, 
+    # axis.line = element_segment(),
+    panel.background = element_rect(fill = NA, color  =  NA),  
+    # panel.border =  element_rect(linetype = "solid", fill = NA, color = "black"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(0.5, "lines"),
+    strip.background = element_rect(
+      color = "black", fill = "#FF0066", size= 1.5, linetype="solid"),
+    strip.text.x = element_text(color = "white"),  
+    strip.text.y = element_text(color = "white", angle = -90),  
+    plot.background = element_rect(color = "white", fill = "white"),  
+    plot.title = element_text(color = "black", hjust = 0.5, lineheight = 1.25,
+                              margin = margin(2, 2, 2, 2), face = "bold.italic"),  
+    plot.subtitle = element_text(color = "black", hjust = 0, margin = margin(2, 2, 2, 2)),  
+    plot.caption = element_text(color = "black", hjust = 0),  
+    plot.margin = unit(rep(1, 4), "lines"))
+}
+```
+
+
+
+
+```{r echo = FALSE}
+# Determine the output format of the document
+outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+
+# Figure and Table Caption Numbering, for HTML do it manually
+capFigNo = 1
+
+# Function to add the Figure Number
+capFig = function(x){
+  if(outputFormat == 'html'){
+    x = paste0("Figure ",capFigNo,". ",x)
+    capFigNo <<- capFigNo + 1
+  }; x
+}
+```
+
+
+
+
+<br>
+
+## Time Series Regression Model
+
+### 1. GDP By Region
+The GDP by Region (in million) data obtained from Statistics New Zealand is annually therefore it needs to be converted into monthly data. The process of converting the data into monthly is split into two parts : interpolate the annual data into quarterly and interpolate the converted quarterly data into monthly. The formula used for coverting the annual data into quarterly data is as follow:
+
+$$\text{GDP}_{year,quarter} = \frac{\text{GDP}_{year + 1}}{4} + \frac{\Delta_{year + 1}\times \text{nb}}{10}, \hspace{.3in} \Delta_{year + 1} = \text{GDP}_{year + 1} - \text{GDP}_{year}$$
+where $\text{nb} = 1,2,3,4$ corresponding to $quarter = Q1,Q2,Q3,Q4$, respectively for each $year = 2008,...,2018$. 
+
+<br>
+```{r echo = FALSE, warning = FALSE, purl = FALSE, message = FALSE}
+
+### CONVERTING ANNUAL DATA INTO QUARTERLY DATA 
+# data cleaning
+GDP_old <- read.csv("GDPRegion.csv", header = TRUE, stringsAsFactors = FALSE)
+
+GDP_old <- as.data.frame(lapply(GDP_old, function(y) gsub(",", "", y)))
+GDP_old[,c(2:20)] <- lapply(GDP_old[,c(2:20)], function(y) as.numeric(gsub(",", "", y)))
+names(GDP_old)[2:20] <- substring(names(GDP_old)[2:20], 2)
+
+GDP_annual <- GDP_old %>% gather(Year, GDP_yearly, -Region)
+GDP_annual$Year <- as.numeric(as.character(GDP_annual$Year))
+
+GDP_annual$Year <- as.integer(GDP_annual$Year)
+GDP_annual$GDP_yearly <- as.integer(GDP_annual$GDP_yearly)
+
+# head(GDP_annual)
+GDP_annual$Region <- factor(GDP_annual$Region)
+# levels(GDP_annual$Region)
+
+GDP_Auckland <- GDP_annual[which(GDP_annual$Region == 'Auckland'), ]
+GDP_BayofPlenty <- GDP_annual[which(GDP_annual$Region == 'Bay of Plenty'), ]
+GDP_Canterbury <- GDP_annual[which(GDP_annual$Region == 'Canterbury(3)'),]
+GDP_Gisborne <- GDP_annual[which(GDP_annual$Region == "Gisborne"),]
+GDP_HawkesBay <- GDP_annual[which(GDP_annual$Region == "Hawke's Bay"),]
+GDP_Manawatu <- GDP_annual[which(GDP_annual$Region == "Manawatu-Wanganui"),]
+GDP_Northland <- GDP_annual[which(GDP_annual$Region == 'Northland'), ]
+GDP_Otago <- GDP_annual[which(GDP_annual$Region == 'Otago'),]
+GDP_Southland <- GDP_annual[which(GDP_annual$Region == 'Southland'),]
+GDP_Taranaki <- GDP_annual[which(GDP_annual$Region == 'Taranaki'), ]
+GDP_Tasman <- GDP_annual[which(GDP_annual$Region == "Tasman / Nelson(2)"),]
+GDP_Marlborough <- GDP_annual[which(GDP_annual$Region == "Marlborough"),]
+GDP_Waikato <- GDP_annual[which(GDP_annual$Region == 'Waikato'), ]
+GDP_Wellington <- GDP_annual[which(GDP_annual$Region == 'Wellington'), ]
+GDP_WestCoast <- GDP_annual[which(GDP_annual$Region == 'West Coast'),]
+
+
+quarterly.func <- function(data_by_region){
+  data_by_region$delta <- c(NA, diff(data_by_region$GDP_yearly, 1))
+  ref <- data.frame(Quarter = paste0("Q", 1:4), nb = 1:4)
+  quart <- merge(data_by_region, ref)
+  quart <- quart[order(quart$Year, quart$Quarter),]
+  quart$GDP_quarterly <- NA
+  quart$GDP_quarterly[1:4] <- quart$GDP_yearly[1:4]/4
+  
+  for (i in (2:dim(data_by_region)[1])){     
+    quart$GDP_quarterly[quart$Year == data_by_region$Year[i]] <- sum(quart$GDP_quarterly[quart$Year == data_by_region$Year[i-1]])/4 + 
+      (quart$delta[quart$Year == data_by_region$Year[i]]*quart$nb[quart$Year==data_by_region$Year[i]])/10
+  }
+  return(quart)
+}
+
+GDP.data <- rbind(quarterly.func(GDP_Auckland), quarterly.func(GDP_BayofPlenty), quarterly.func(GDP_Canterbury),
+                  quarterly.func(GDP_Gisborne), quarterly.func(GDP_HawkesBay), quarterly.func(GDP_Manawatu), 
+                  quarterly.func(GDP_Marlborough), quarterly.func(GDP_Northland), quarterly.func(GDP_Otago), 
+                  quarterly.func(GDP_Southland), quarterly.func(GDP_Taranaki), quarterly.func(GDP_Tasman), 
+                  quarterly.func(GDP_Waikato), quarterly.func(GDP_Wellington), quarterly.func(GDP_WestCoast))
+
+# levels(GDP.data$Region)
+rownames(GDP.data) <- 1:nrow(GDP.data)
+GDP_dt <- GDP.data[which(GDP.data$Year >= 2008),]
+
+DT::datatable(GDP_dt, caption = "Table 2: GDP (quarterly) by Region", options = list(pageLength = 6))
+```
+
+<br>
+The quarterly data can then be converted into monthly data using __cubic interpolation__ (```spline()``` function). 
+```{r echo = FALSE, warning = FALSE, purl = FALSE, message = FALSE }
+GDP.data$Quarter2 <- as.yearqtr(GDP.data$Year, format = "%Yq%q")
+GDP.data$qvar <- as.Date(GDP.data$Quarter2)
+mydata1 <-  subset(GDP.data, Quarter2 > "2007 Q4")
+
+monthly <- seq(mydata1$qvar[1], tail(mydata1$qvar, 1), by = "month")
+gdp <- mydata1[c("Region", "qvar", "GDP_quarterly")]  # monthly
+gdp2 <- data.frame(qvar=monthly, gdp2 = spline(gdp, method = "fmm", xout = monthly)$y)
+mydata2 <- merge(gdp, gdp2, by="qvar", all=TRUE)
+names(mydata2)[names(mydata2) == "gdp2"] <- "GDP_monthly"
+names(mydata2)[names(mydata2) == "qvar"] <- "date"
+
+DT::datatable(mydata2, caption = "Table 3: GDP (monthly) by Region", options = list(pageLength = 6))
+```
+
+
+
+### 2. Seasonal Dummy
+
+```{r echo = FALSE, fig.asp = 0.5, fig.cap = capFig("Monthly seasonal time series data"), fig.align = "center", fig.height = 3, fig.width = 5.5}
+orange <- read.csv("oranges.csv", header = TRUE)
+familyA <- orange[orange$Name == "A", ]
+levels(familyA$Month) <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+ts.A <- ts(familyA$Total, frequency = 12,
+           start = c(2013, 1), end = c(2020, 12))
+
+p <- ggplot(familyA, aes(factor(Month), Total)) + geom_boxplot()
+dat <- ggplot_build(p)$data[[1]]
+p + geom_segment(data = dat, aes(x = xmin, xend = xmax, 
+                               y = middle, yend = middle),
+                 colour = "#FF3366", size = 1) + my_theme() + xlab("Month") +
+  ggtitle("Boxplot of Family A monthly data")
+
+# split the data into training and test sets
+new.tsA <- window(ts.A, start = c(2016, 1))
+training <- window(new.tsA, start = c(2016,1), end = c(2018,12))
+test <- window(new.tsA, start = 2019)
+```
+
+
+Family A frequently bought oranges in January, March, May, August and November but did not do so during the other months.
+
+The aim is to forecast the 2020 bought oranges for Family A. We can model this data using a regression model with a linear trend and monthly dummy variables,
+$$y_t = \beta_o + \beta_1t + \beta_2m_{2,t} + \beta_3m_{3,t} + \dots + \beta_{12}m_{12,t} + \epsilon_t$$
+where $\beta_1$ is the trend predictor and $\beta_2m_{2,t},\dots,\beta_{12}m_{12,t}$ are the seasonal dummy predictors for 12 months. Notice that only _eleven_ _dummy_ _variables_ are needed to code twelve categories. That is because the first category (in this case _January_) is captured by the intercept, and is specified when the dummy variables are all set to zero. In R the trend predictor is coded as ```trend``` and the seasonal dummy predictor is coded as ```season```. 
+
+
+```{r purl = FALSE}
+sumVal <- tapply(training, cycle(training), FUN = sum)
+fit.reg <- tslm(training ~ trend + relevel(season, ref = which.min(sumVal)))
+names(fit.reg$coefficients)[3:13] <- paste("month", substr(names(fit.reg$coefficients)[3:13],41,42))
+summary(fit.reg)
+```
+
+The ```p-value``` reported is the probability of the estimated $\beta$ coefficient being as large as it is if there was no real relationship between the response variable and the corresponding predictor. In this case, no months is shown to have an effect on the number of oranges bought, implying seasonality is not significant. 
+
+<br>
+
+```{r echo = FALSE, fig.asp = 0.5, fig.cap = capFig("Forecast of the predicted regression model"), purl = FALSE, fig.align = "center", fig.height = 3, fig.width = 5.5}
+fit.30 <- forecast(fit.reg, h = 12, level = 30, biasadj = TRUE)
+fit.50 <- forecast(fit.reg, h = 12, level = 50, biasadj = TRUE)
+fit.70 <- forecast(fit.reg, h = 12, level = 70, biasadj = TRUE)
+graph2 <- cbind(actuals = fit.30$x, pointfc_mean = fit.30$mean,
+            lower_70 = fit.70$lower, upper_70 = fit.70$upper,
+            lower_50 = fit.50$lower, upper_50 = fit.50$upper,
+            lower_30 = fit.30$lower, upper_30 = fit.30$upper)
+
+interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
+  value = g.getValue(row, col);
+  if(value[0] != value[2]) {
+    lower = Dygraph.numberValueFormatter(value[0], opts);
+    upper = Dygraph.numberValueFormatter(value[2], opts);
+    return '[' + lower + ', ' + upper + ']';
+  } else {
+    return Dygraph.numberValueFormatter(num, opts);
+  }
+}"
+dygraph(graph2, height = '400px', width = '100%', ylab = "Monthly bought oranges") %>%
+  dySeries(name = "actuals") %>%
+  dySeries(name = "pointfc_mean", label = "forecast") %>%
+  dySeries(name = c("lower_30", "pointfc_mean", "upper_30"), label = "30% PI") %>%
+  dySeries(name = c("lower_50", "pointfc_mean", "upper_50"), label = "50% PI") %>%
+  dySeries(name = c("lower_70", "pointfc_mean", "upper_70"), label = "70% PI") %>%
+  dyLegend(show = "always", hideOnMouseOut = FALSE, labelsSeparateLines = TRUE) %>%
+  dyAxis("y", valueFormatter = interval_value_formatter) %>%
+  dyAxis("x", axisLabelFormatter = 'function(d){ var month = d.getMonth().toString().fontsize(3) ;var year = d.getFullYear().toString().fontsize(3); return  year}') %>%
+  dyHighlight(highlightCircleSize = 5, 
+              highlightSeriesOpts = list(strokeWidth = 2)) %>%
+  dyCSS(textConnection(".dygraph-legend { left: 70px !important;
+  background-color: rgba(255, 255, 255, 0.5) !important; }
+  .dygraph-title {color: navy; font-weight: bold;}
+  .dygraph-axis-label {font-size: 11px;}")) %>%
+  dyOptions(labelsKMB = "K", axisLineColor = "navy", gridLineColor = "grey", 
+            digitsAfterDecimal = 1, colors = c("black", "#FF3399", "#00CCFF", "#33FF00"))
+
+```
+
+```{r echo = FALSE, fig.asp = 0.5, fig.cap = capFig("Time plot of Family A tre and predicted bought oranges"), fig.align = "center"}
+autoplot(training, series = "Data") +
+  autolayer(fitted(fit.reg), series = "Fitted") +
+  guides(color = guide_legend(title = "Series")) + 
+  xlab("Year") + ylab("Oranges") +
+  ggtitle("Family A's monthly bought oranges") +
+  geom_line(color = "cyan") +
+  geom_line(color = "red") + my_theme()
+
+cor.test(training, fitted(fit.reg), method = "pearson")
+```
+
+
+Figure 2 plots the actual (training) data versus the fitted data. If the predictions are close to the actual values,$\text{R}^2$ is expected to be close to 1. The Pearson correlation test shows that the correlation between these variables is  $\text{R}^2$ = 0.54. In this case model does an alright job as it explains 54% of the variation in the Family A data. 
+
+
+```{r echo = FALSE, warning = FALSE, purl = FALSE, message = FALSE, fig.asp = 0.5, fig.cap = capFig("Time plot of Tasman visitors and predicted Tasman visitors"), fig.align = "center"}
+PLOT <- cbind(Data = new.tsA, Fitted = fitted(fit.reg)) %>%
+  as.data.frame() %>%
+  ggplot(aes(x = Data, y = Fitted,
+             colour = as.factor(cycle(new.tsA)))) +
+    geom_point() +
+    ylab("Fitted") + xlab("Actual values") +
+    ggtitle("Family A's monthly bought oranges") +
+    scale_colour_brewer(palette = "Paired", name = "Month") +
+    geom_abline(intercept = 0, slope = 1, color = "cyan") +
+    my_theme()
+suppressMessages(PLOT)
+```
+
+A plot of the residuals against the fitted values should show no pattern. If a pattern is observed, there may be “heteroscedasticity” in the errors which means that the variance of the residuals may not be constant. 
+
+
+```{r echo = FALSE, warning = FALSE, purl = FALSE, message = FALSE, fig.asp = 0.4, fig.align = "center"}
+cbind(Fitted = fitted(fit.reg),
+      Residuals = residuals(fit.reg)) %>%
+  as.data.frame() %>%
+  ggplot(aes(x = Fitted, y = Residuals)) + geom_point() + my_theme() +
+  ggtitle("Scatter plot of residuals") -> plot1
+
+autoplot(resid(fit.reg)) +
+  geom_line(color = "cyan") +
+  my_theme() +
+  ggtitle("Line plot of residuals") + 
+  xlab("Year") + ylab("") -> plot2
+
+grid.arrange(plot1, plot2, ncol = 2)
+
+SEASONAL.reg <- forecast(fit.reg, h = 12)
+```
+    
+The residuals based on the residual plots are not showing any obvious patterns or trends, indicating constant variance. 
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE, fig.asp = 0.4, fig.ncol = 1, fig.cap = capFig("Residuals of regression model including trend and seasonal dummy predictors"), fig.align = "center"}
+ci4 <- qnorm((1 + 0.95)/2)/sqrt(length(resid(fit.reg)))
+ggAcf(resid(fit.reg)) +
+  geom_segment(lineend = "butt", color = "cyan") +
+  geom_hline(yintercept = 0, color = "cyan") +
+  geom_hline(yintercept = c(ci4, -ci4), color = "#FF0099", linetype = "dashed") +
+  my_theme() + ggtitle("ACF plot of residuals") -> p11 
+
+res <- resid(fit.reg)
+
+update_geom_defaults("line", list(color = "darkblue"))
+update_geom_defaults("bar", list(fill = "cyan"))
+gghistogram(res, add.rug = TRUE, add.normal = TRUE) + ggtitle("Histogram of residuals") + my_theme() + geom_line() -> p12
+
+grid.arrange(p11, p12, ncol = 2)
+```
+
+
+The ```CV()``` (short for cross-validation statistic) function computes the CV, AIC, AICc and BIC measures of predictive accuracy for a linear model. For these measures, the model fits the data better with the lowest value of CV, AIC, AICc and BIC; the model fits the data better with the highest value for Adjusted $\text{R}^2$. Note: __This is useful when studying the effect of each predictor, but is not particularly useful for forecasting__.
+
+```{r purl = FALSE}
+CV(fit.reg)
+```
+
+This function's purpose is to select the best predictors to use in a regression model when there are multiple predictors. Here the result shows that the seasonal dummy variable should be included in the model. 
+
+
+<br>
+
+
+## Other methods
+
+### 1. STL-ETS model
+The ```stlf()``` function decomposes the time series using STL, forecast the seasonally adjusted data (data without seasonality) and return the 'reseasonalized' forecasts (forecasts that take the seasonality into account). If the ```method``` argument is not specified, the function will use the ETS approach applied to the seasonally adjusted series. 
+
+```{r}
+STL <- stlf(training, biasadj = TRUE, h = 12)
+STL$model$aic
+```
+
+<br>
+
+
+### 2. NNAR model
+The ```nnetar()``` function in the forecast package for R fits a __Neural Network Model__ (NNAR) to a time series with lagged values of the time series as inputs (and possibly some other exogenous inputs). It is therefore a non-linear autogressive model, allowing complex non-linear relationships between the response variable and its predictors. The NNAR model for seasonal data has the form: $$NNAR(p,P,k)[m]$$
+
+
+```{r purl = FALSE}
+set.seed(2015)
+nnetar.model <- nnetar(training)
+NNAR <- forecast(nnetar.model, h = 12, biasadj = TRUE)
+nnetar.model
+```
+
+
+Since ```NNAR``` models usually (and in this case) have no underlying statistical model, calculating an AIC/BIC does not make sense here. A possible solution to select the best model is to fit various models to 90% of the data and use these models to forecast the remaining 10%, i.e., use a holdout sample. Choose the model that performs best on the holdout sample ("best" will depend on the error measure(s)). Refit this model based on the entire sample.
+
+<br>
+### 3. TBATS model
+Both the NNAR and TBATS models are mainly used for series exhibiting multiple complex seasonalities. __TBATS__ is short for Exponential smoothing state space model with Box-Cox transformation, ARMA errors, Trend and Seasonal components:
+
+- __T__ for trigonometric regressors to model multiple-seasonalities
+- __B__ for Box-Cox transformations
+- __A__ for ARMA errors
+- __T__ for trend
+- __S__ for seasonality
+
+The TBATS model can be fitted using the ```tbats()``` command in the ```forecast``` package for R. The forecast function when running the TBATS model only returns the AIC value hence in this section we are comparing models using AIC. However AIC is not valid for neither NNAR or Combination (the combination is not really model but merely an average of all the methods'forecasts) thus these methods are going to be compared using RMSE.
+
+```{r}
+TBATS <- forecast(tbats(training, biasadj = TRUE, use.box.cox = FALSE), h = 12)
+TBATS$model$AIC
+```
+
+<br>
+
+### 4. Forecast Combinations
+
+An easy way to improve forecast accuracy is to use several different methods on the same time series, and to average the resulting forecasts. The forecasts used in this example are from the following models: ETS, ARIMA, STL-ETS, NNAR, and TBATS.
+
+```{r echo = FALSE, purl = FALSE}
+arima.model <- auto.arima(training, stepwise = FALSE, approximation = FALSE)
+# auto.arima.model
+ets.model <- ets(training)
+# ets.model
+ARIMA <- forecast(arima.model, h = 12, biasadj = TRUE)
+ETS <- forecast(ets.model, h = 12, biasadj = TRUE)
+```
+
+
+```{r purl = FALSE}
+Combination <- (ARIMA[["mean"]] + ETS[["mean"]] + STL[["mean"]] + NNAR[["mean"]] + 
+                  TBATS[["mean"]])/5
+```
+
+Though the Combination models performance is particularly well in this series, the NNAR model's performance is shown to have the smallest RMSE error value. 
+
+```{r echo = FALSE, purl = FALSE}
+minh <- c(ARIMA = accuracy(ARIMA, test)["Test set","RMSE"],
+  ETS = accuracy(ETS, test)["Test set","RMSE"],
+  `STL-ETS` = accuracy(STL, test)["Test set","RMSE"],
+  NNAR = accuracy(NNAR, test)["Test set","RMSE"],
+  TBATS = accuracy(TBATS, test)["Test set","RMSE"],
+  Combination = accuracy(Combination, test)["Test set","RMSE"])
+connor <- as.matrix(minh)
+love <- t(connor)
+rownames(love) <- "RMSE"
+love
+```
+
+
+
+
+<br>
+
+
+## Results 
+```{r echo = FALSE, purl = FALSE}
+year2018 <- c("Jan", "Feb", "Mar", "Apr", "May", "June", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+TrueData <- familyA[familyA$Year == 2020,]$Total
+ARIMA <- floor(as.vector(ARIMA$mean))
+ETS <- floor(as.vector(ETS$mean))
+Seasonal <- floor(as.vector(SEASONAL.reg$mean))
+STL <- floor(as.vector(STL$mean))
+NNAR <- floor(as.vector(NNAR$mean))
+TBATS <- floor(as.vector(TBATS$mean))
+Combination <- floor(as.vector(Combination))
+nontrans.results <- data.frame(year2018, TrueData, ARIMA, ETS, Seasonal, STL, NNAR, TBATS, Combination)
+
+names(nontrans.results) <- cell_spec(names(nontrans.results), color = "#33CC99")
+kable(nontrans.results, caption = "Table 4: True values vs. Predicted values for non-transformed data", escape = FALSE) %>%
+  column_spec(c(1,2,3,4)) %>%
+  kable_styling(full_width = FALSE, position = "center") %>% scroll_box(width = "500px", height = "200px")
+```
+
+
+<br>
+
+Overall, the best model for the non-transformed data is the ARIMA model, ARIMA(1,0,0)(0,1,0)[12] and the best model for the transformed data is the Combination model. This statement is roughly based on the difference between the model's predicted values and the true value of the original data for the Tasman Glacier data. 
+
+<br>
+```{r echo = FALSE, purl = FALSE}
+lambda <- BoxCox.lambda(training)
+# lambda
+transformed <- BoxCox(training, lambda)
+
+# Seasonal dummy
+fit.trans <- tslm(transformed ~ trend + season)
+SEASONAL.reg2 <- forecast(fit.trans, h = 12, lambda = lambda, biasadj = TRUE)
+
+# STL-ETS model
+STL2 <- stlf(training, lambda = lambda, biasadj = TRUE, h = 12)
+
+# NNAR model
+set.seed(2015)
+nnetar.trans <- nnetar(transformed)
+NNAR2 <- forecast(nnetar.trans, lambda = lambda, h = 12)
+
+# TBATS
+model2 <- tbats(training, biasadj = TRUE, use.box.cox = TRUE)
+TBATS2 <- forecast(model2, h = 12)
+
+# ARIMA
+auto.arima.model2 <- auto.arima(transformed, stepwise = FALSE, approximation = FALSE)
+ARIMA2 <- forecast(auto.arima.model2, lambda = lambda, h = 12, biasadj = TRUE)
+
+# ETS 
+ets.model2 <- ets(transformed)
+ETS2 <- forecast(ets.model2, lambda = lambda, h = 12, biasadj = TRUE)
+
+# Cobination
+Combination2 <- (ARIMA2[["mean"]] + ETS2[["mean"]] + STL2[["mean"]] +NNAR2[["mean"]] + TBATS2[["mean"]]) /5
+
+minh <- c(ETS = accuracy(ETS2, test)["Test set","RMSE"],
+          ARIMA = accuracy(ARIMA2, test)["Test set","RMSE"],
+          `STL-ETS` = accuracy(STL2, test)["Test set","RMSE"],
+          NNAR = accuracy(NNAR2, test)["Test set","RMSE"],
+          TBATS = accuracy(TBATS2, test)["Test set","RMSE"],
+          Combination = accuracy(Combination2, test)["Test set","RMSE"])
+connor <- as.matrix(minh)
+```
+
+
+```{r echo = FALSE, purl = FALSE}
+ARIMA2 <- floor(as.vector(ARIMA2$mean))
+ETS2 <- floor(as.vector(ETS2$mean))
+Seasonal2 <- floor(as.vector(SEASONAL.reg2$mean))
+STL2 <- floor(as.vector(STL2$mean))
+NNAR2 <- floor(as.vector(NNAR2$mean))
+TBATS2 <- floor(as.vector(TBATS2$mean))
+Combination2 <- floor(as.vector(Combination2))
+nontrans.results <- data.frame(year2018, TrueData, ARIMA2, ETS2, Seasonal2, STL2, NNAR2, TBATS, Combination2)
+trans.results <- data.frame(year2018, TrueData, ARIMA, ETS, Seasonal, STL, NNAR, TBATS, Combination)
+
+names(trans.results) <- cell_spec(names(trans.results), color = "#33CC99")
+kable(trans.results, caption = "Table 6: True values vs. Predicted values for transformed data", escape = FALSE) %>%
+    column_spec(c(1,2,3,4)) %>%
+    kable_styling(full_width = FALSE, position = "center") %>% scroll_box(width = "500px", height = "200px")
+```
+
+
+<br>
+
+
+## To-Do List 
+:::: {.blackbox data-latex=""}
+<ul>
+<li><input type="checkbox"> Attempt R Shiny : write functions for applying ARIMA method on multiple DoC data sets (Track levels). </li>
+
+<li><input type="checkbox"> Review Dynamic Regression Models as another possible model.</li>
+
+<li><input type="checkbox" checked> Impose a constraint on the forecasts to ensure they stay within some specified range [a,b]. </li>
+</ul>
+::::
+
+
+<br>
+
+
+## References
+https://www.stats.govt.nz/information-releases/regional-gross-domestic-product-year-ended-march-2018
+
+https://robjhyndman.com/hyndsight/nnetar-prediction-intervals/
+
+```{r, child="_page_built_on.Rmd"}
+```
