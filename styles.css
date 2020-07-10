@@ -6,11 +6,15 @@
 
 .navbar-default {
   background:rgba(255,140,0, 0.5);
+  max-height:50px;
 }
 
-.navbar-brand{
-  margin-left:-45% !important;
+
+.navbar-nav {
+  margin-left:8% !important;
+  line-height:50px !important;
 }
+
 
 .navbar-default .navbartoggle {
   border-color:transparent;
