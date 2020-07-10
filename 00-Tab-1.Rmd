@@ -3,35 +3,13 @@ title: "First Report"
 author: "_Minh Chau Van Nguyen_"
 output: 
  html_document:
+    css: "styles.css"
     toc: TRUE
     toc_depth: 4
     toc_float: 
      smooth_scroll: TRUE
 ---
 
-<style>
-.blackbox {
-  padding: 1em;
-  background: white;
-  color: black;
-  border: 2px solid blue;
-  border-radius: 10px;
-}
-.center {
-  text-align: center;
-}
-table {
-  background-color: white !important;
-  color: black !important;
-}
-.navbar navbar-default navbar-fixed-top{
-    background-color: pink;
-}
-div.blue pre { background-color:lightblue; border:dotted;}
-div.blue pre.r { background-color:lavender; }
-</style>
-
-<div class = "blue">
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE, purl = FALSE}
 library(xts); library(forecast); library(quantmod); library(ggplot2); library(caret)
@@ -102,10 +80,13 @@ capFig = function(x){
 }
 ```
 
-## Introduction
+******
 
-The Orange data consists of 16 Families representing each New Zealand region. Each family data has four columns: **Month**, **Year**, **Member** and **Total**, where **Member** is the number of family members and **Total** is the number of oranges bought recorded at monthly interval. 
+<br>
 
+## Family A orange data
+
+The data used as an example throughout this report is from **Family A** from **Northland** region. Family A has data recorded from 2013 til 2020, but only data from 2013 til 2018 is used in order to compare between the predicted number oranges and the true number of oranges for 2019. The purpose of this is to examine the realibility of the proposed Time Series models.  
 
 
 ```{r echo = FALSE, purl = FALSE}
@@ -118,15 +99,13 @@ DT::datatable(familyA, rownames = FALSE, caption = "Table 1: Family A data summa
 ```
 
 
+
+
 <br>
-The data used as an example throughout this report is from **Family A** from **Northland** region. Family A has data recorded from 2013 til 2020, but only data from 2013 til 2019 is used in order to compare between the predicted number oranges and the true number of oranges for 2019. The purpose of this is to examine the realibility of the proposed Time Series models.  
-
-******
 
 
 
-
-### Analysis of the data : Scenario 1
+## Analysis of the data : Scenario 1
 __<span style="background-color:#FFE1FF; font-size:15pt;">Aim : to forecast the number of oranges for 2020</span>__.
 
 :::: {.blackbox data-latex=""}
@@ -433,19 +412,19 @@ require(pander)
 panderOptions('table.split.table', Inf)
 set.caption("Table 2: True values vs. Predicted values")
 my.data <- "
-     2020 | True Data   | Predicted ARIMA | Predicted ETS 
-     Jan  | 32      | 33           | 27        
-     Feb  | 8      | 24           | 27          
-     Mar  | 23      | 28          | 27        
-     Apr  | 34        | 27          | 27        
+     2019 | True Data   | Predicted ARIMA | Predicted ETS 
+     Jan  | 0      | 33           | 27        
+     Feb  | 19      | 24           | 27          
+     Mar  | 47      | 28          | 27        
+     Apr  | 2        | 27          | 27        
      May  | 46        | 27           | 27          
-     Jun  | 24        | 27             | 27          
-     Jul  | 17        | 27             | 27          
-     Aug  | 34        | 27             | 27          
-     Sep  | 12        | 27             | 27          
-     Oct  | 44        | 27           | 27          
-     Nov  | 4      | 27           | 27        
-     Dec  | 15      | 27           | 27        "
+     Jun  | 15        | 27             | 27          
+     Jul  | 49        | 27             | 27          
+     Aug  | 3        | 27             | 27          
+     Sep  | 33        | 27             | 27          
+     Oct  | 22        | 27           | 27          
+     Nov  | 47      | 27           | 27        
+     Dec  | 25      | 27           | 27        "
 
 df <- read.delim(textConnection(my.data),header = FALSE, sep = "|", strip.white = TRUE, stringsAsFactors = FALSE)
 names(df) <- unname(as.list(df[1,])) # put headers on
@@ -613,19 +592,19 @@ require(pander)
 panderOptions('table.split.table', Inf)
 set.caption("Table 4: True values vs. Predicted values")
 my.data2 <- "
-     2020 | True Data   | Predicted ARIMA | Predicted ETS 
-     Jan  | 32      | 34           | 27        
-     Feb  | 8      | 24           | 27          
-     Mar  | 23      | 28          | 27        
-     Apr  | 34        | 26          | 27        
+     2019 | True Data   | Predicted ARIMA | Predicted ETS 
+     Jan  | 0      | 34           | 27        
+     Feb  | 19      | 24           | 27          
+     Mar  | 47      | 28          | 27        
+     Apr  | 2        | 26          | 27        
      May  | 46        | 27           | 27          
-     Jun  | 24        | 27             | 27          
-     Jul  | 17        | 27             | 27          
-     Aug  | 34        | 27             | 27          
-     Sep  | 12        | 27             | 27          
-     Oct  | 44        | 27           | 27          
-     Nov  | 4      | 27           | 27        
-     Dec  | 15      | 27           | 27        "
+     Jun  | 15        | 27             | 27          
+     Jul  | 49        | 27             | 27          
+     Aug  | 3        | 27             | 27          
+     Sep  | 33        | 27             | 27          
+     Oct  | 22        | 27           | 27          
+     Nov  | 47     | 27           | 27        
+     Dec  | 25      | 27           | 27        "
 
 df2 <- read.delim(textConnection(my.data2) ,header = FALSE, sep = "|", strip.white = TRUE, stringsAsFactors = FALSE)
 names(df2) <- unname(as.list(df2[1,])) # put headers on

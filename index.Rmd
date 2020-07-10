@@ -1,8 +1,9 @@
 ---
-title: "Data Introduction"
+title: "Abstract"
 author: "_Minh Chau Van Nguyen_"
 output: 
  html_document:
+    css: "styles.css"
     toc: TRUE
     toc_depth: 2
     toc_float: 
@@ -11,7 +12,46 @@ output:
 
 ******
 
-# SUMMARY
+<br>
+
+## Introduction
+
+
+The Orange data consists of 16 Families representing each New Zealand region. Each family data has four columns: **Month**, **Year**, **Member** and **Total**, where **Member** is the number of family members and **Total** is the number of oranges bought recorded at monthly interval. The goal is to predict the number of oranges each family is going to be buying in the next three years using Time Series Analysis. 
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(hpackedbubble)
+library(tidyr)
+library(dplyr)
+
+orange <- read.csv("oranges.csv", header = TRUE)
+
+bubbledata <- orange %>% filter(Year == 2018) %>% group_by(Region, Name) %>%
+  summarise(TotalOranges = sum(Total))
+
+hpackedbubble(cat = head(bubbledata$Region, 10), 
+              name = head(bubbledata$Name, 10),
+              value = head(bubbledata$TotalOranges, 10),
+              title = "Orange statistics in 2018",
+              dataLabelsFilter = 100,
+              packedbubbleMinSize = "30%",
+              packedbubbleMaxSize = "150%",
+              theme = 'gridlight',
+              pointFormat = "<b>Family {point.name}:</b> {point.value} oranges",
+              packedbubbleZMin = 0,
+              packedbubbleZmax = 10000, 
+              split = 0,
+              dataLabelsformat = "Family {point.name}",
+              gravitational = 0.02,
+              parentNodeLimit = 0, 
+              dragBetweenSeries = 0
+    )
+ 
+```
+
+<br>
+
+## Tab Navigation
 1. [Tab One](00-Tab-1.html)
 2. [Tab Two](01-Tab-2.html)
 

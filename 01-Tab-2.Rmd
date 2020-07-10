@@ -3,6 +3,7 @@ title: "Second Report"
 author: "_Minh Chau Van Nguyen_"
 output: 
  html_document:
+    css: "styles.css"
     toc: TRUE
     toc_depth: 4
     toc_float: 
@@ -12,23 +13,7 @@ output:
 ******
 
 <style>
-.blackbox {
-  padding: 1em;
-  background: white;
-  color: black;
-  border: 2px solid #3399CC;
-  border-radius: 10px;
-}
-.center {
-  text-align: center;
-}
-table {
-  background-color: white !important;
-  color: black !important;
-}
-.navbar navbar-default navbar-fixed-top{
-    background-color: pink;
-}
+
 div.blue pre { background-color:lightblue; }
 div.blue pre.r { background-color:lavender; }
 </style>
@@ -174,7 +159,7 @@ GDP.data <- rbind(quarterly.func(GDP_Auckland), quarterly.func(GDP_BayofPlenty),
 rownames(GDP.data) <- 1:nrow(GDP.data)
 GDP_dt <- GDP.data[which(GDP.data$Year >= 2008),]
 
-DT::datatable(GDP_dt, caption = "Table 2: GDP (quarterly) by Region", options = list(pageLength = 6))
+DT::datatable(GDP_dt, caption = "Table 1: GDP (quarterly) by Region", options = list(pageLength = 6))
 ```
 
 <br>
@@ -191,7 +176,7 @@ mydata2 <- merge(gdp, gdp2, by="qvar", all=TRUE)
 names(mydata2)[names(mydata2) == "gdp2"] <- "GDP_monthly"
 names(mydata2)[names(mydata2) == "qvar"] <- "date"
 
-DT::datatable(mydata2, caption = "Table 3: GDP (monthly) by Region", options = list(pageLength = 6))
+DT::datatable(mydata2, caption = "Table 2: GDP (monthly) by Region", options = list(pageLength = 6))
 ```
 
 
@@ -228,7 +213,7 @@ where $\beta_1$ is the trend predictor and $\beta_2m_{2,t},\dots,\beta_{12}m_{12
 
 ```{r purl = FALSE}
 sumVal <- tapply(training, cycle(training), FUN = sum)
-fit.reg <- tslm(training ~ trend + relevel(season, ref = which.min(sumVal)))
+fit.reg <- tslm(training~ trend + relevel(season, ref = which.min(sumVal)))
 names(fit.reg$coefficients)[3:13] <- paste("month", substr(names(fit.reg$coefficients)[3:13],41,42))
 summary(fit.reg)
 ```
@@ -289,14 +274,14 @@ cor.test(training, fitted(fit.reg), method = "pearson")
 ```
 
 
-Figure 2 plots the actual (training) data versus the fitted data. If the predictions are close to the actual values,$\text{R}^2$ is expected to be close to 1. The Pearson correlation test shows that the correlation between these variables is  $\text{R}^2$ = 0.54. In this case model does an alright job as it explains 54% of the variation in the Family A data. 
+Figure 2 plots the actual (training) data versus the fitted data. If the predictions are close to the actual values,$\text{R}^2$ is expected to be close to 1. The Pearson correlation test shows that the correlation between these variables is  $\text{R}^2$ = 0.3225668. In this case the model doesn't seem like an appropriate choice for fitting the data of Family A as it only explains 32% of the variation in the data. 
 
 
 ```{r echo = FALSE, warning = FALSE, purl = FALSE, message = FALSE, fig.asp = 0.5, fig.cap = capFig("Time plot of Tasman visitors and predicted Tasman visitors"), fig.align = "center"}
-PLOT <- cbind(Data = new.tsA, Fitted = fitted(fit.reg)) %>%
+PLOT <- cbind(Data = training, Fitted = fitted(fit.reg)) %>%
   as.data.frame() %>%
   ggplot(aes(x = Data, y = Fitted,
-             colour = as.factor(cycle(new.tsA)))) +
+             colour = as.factor(cycle(training)))) +
     geom_point() +
     ylab("Fitted") + xlab("Actual values") +
     ggtitle("Family A's monthly bought oranges") +
@@ -306,7 +291,7 @@ PLOT <- cbind(Data = new.tsA, Fitted = fitted(fit.reg)) %>%
 suppressMessages(PLOT)
 ```
 
-A plot of the residuals against the fitted values should show no pattern. If a pattern is observed, there may be “heteroscedasticity” in the errors which means that the variance of the residuals may not be constant. 
+Note: A plot of the residuals against the fitted values should show no pattern. If a pattern is observed, there may be “heteroscedasticity” in the errors which means that the variance of the residuals may not be constant. 
 
 
 ```{r echo = FALSE, warning = FALSE, purl = FALSE, message = FALSE, fig.asp = 0.4, fig.align = "center"}
@@ -354,7 +339,7 @@ The ```CV()``` (short for cross-validation statistic) function computes the CV, 
 CV(fit.reg)
 ```
 
-This function's purpose is to select the best predictors to use in a regression model when there are multiple predictors. Here the result shows that the seasonal dummy variable should be included in the model. 
+This function's purpose is to select the best predictors to use in a regression model when there are multiple predictors. Here the result shows that the seasonal dummy variables are not required in the model. 
 
 
 <br>
@@ -412,9 +397,9 @@ An easy way to improve forecast accuracy is to use several different methods on 
 
 ```{r echo = FALSE, purl = FALSE}
 arima.model <- auto.arima(training, stepwise = FALSE, approximation = FALSE)
-# auto.arima.model
+
 ets.model <- ets(training)
-# ets.model
+
 ARIMA <- forecast(arima.model, h = 12, biasadj = TRUE)
 ETS <- forecast(ets.model, h = 12, biasadj = TRUE)
 ```
@@ -449,7 +434,7 @@ love
 ## Results 
 ```{r echo = FALSE, purl = FALSE}
 year2018 <- c("Jan", "Feb", "Mar", "Apr", "May", "June", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-TrueData <- familyA[familyA$Year == 2020,]$Total
+TrueData <- familyA[familyA$Year == 2019,]$Total
 ARIMA <- floor(as.vector(ARIMA$mean))
 ETS <- floor(as.vector(ETS$mean))
 Seasonal <- floor(as.vector(SEASONAL.reg$mean))
@@ -460,7 +445,7 @@ Combination <- floor(as.vector(Combination))
 nontrans.results <- data.frame(year2018, TrueData, ARIMA, ETS, Seasonal, STL, NNAR, TBATS, Combination)
 
 names(nontrans.results) <- cell_spec(names(nontrans.results), color = "#33CC99")
-kable(nontrans.results, caption = "Table 4: True values vs. Predicted values for non-transformed data", escape = FALSE) %>%
+kable(nontrans.results, caption = "Table 3: True values vs. Predicted values for non-transformed data", escape = FALSE) %>%
   column_spec(c(1,2,3,4)) %>%
   kable_styling(full_width = FALSE, position = "center") %>% scroll_box(width = "500px", height = "200px")
 ```
