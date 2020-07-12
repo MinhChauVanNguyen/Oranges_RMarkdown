@@ -57,8 +57,8 @@ hpackedbubble(cat = head(bubbledata$Region, 10),
 <br>
 
 ## Tab Navigation
-1. [Tab One](00-Tab-1.html) - First Report
-2. [Tab Two](01-Tab-2.html) - Second Report
+1. [Tab One](00-Tab-1.html) : First Report
+2. [Tab Two](01-Tab-2.html) : Second Report
 
 
 
