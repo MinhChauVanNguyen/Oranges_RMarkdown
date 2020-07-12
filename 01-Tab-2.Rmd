@@ -41,6 +41,7 @@ $$\text{GDP}_{year,quarter} = \frac{\text{GDP}_{year + 1}}{4} + \frac{\Delta_{ye
 where $\text{nb} = 1,2,3,4$ corresponding to $quarter = Q1,Q2,Q3,Q4$, respectively for each $year = 2008,...,2018$. 
 
 <br>
+
 ```{r echo = FALSE, warning = FALSE, purl = FALSE, message = FALSE}
 
 ### CONVERTING ANNUAL DATA INTO QUARTERLY DATA 
@@ -107,7 +108,11 @@ DT::datatable(GDP_dt, caption = "Table 1: GDP (quarterly) by Region", options = 
 ```
 
 <br>
+
 The quarterly data can then be converted into monthly data using __cubic interpolation__ (```spline()``` function). 
+
+<br>
+
 ```{r echo = FALSE, warning = FALSE, message = FALSE}
 GDP.data$Quarter2 <- as.yearqtr(GDP.data$Year, format = "%Yq%q")
 GDP.data$qvar <- as.Date(GDP.data$Quarter2)
@@ -123,7 +128,7 @@ names(mydata2)[names(mydata2) == "qvar"] <- "date"
 DT::datatable(mydata2, caption = "Table 2: GDP (monthly) by Region", options = list(pageLength = 6))
 ```
 
-
+<br>
 
 ### 2. Seasonal Dummy
 
@@ -165,8 +170,13 @@ __<span style="background-color:#FFE1FF;">Comment</span>__: The ```p-value``` re
 ```{r echo = FALSE, fig.asp = 0.5, fig.cap = capFig("Forecast of the predicted regression model"), purl = FALSE, fig.align = "center"}
 fc.reg <- forecast(fit.reg, h = 12, level = c(30,50,70), biasadj = TRUE)
 
-dygraph.func(model = fc.reg, main = "Linear Regression Model")
+dygraph.func(model = fc.reg, main = "Linear Regression Model Forecast")
 ```
+
+
+<br><br>
+
+__<span style="background-color:#FFE1FF;">Comment</span>__: Figure 3 plots the actual data versus the fitted data. If the predictions are close to the actual values,$\text{R}^2$ is expected to be close to 1. The Pearson correlation test shows that the correlation between these variables is  $\text{R}^2$ = 0.6177605. In this case the model doesn't seem like an appropriate choice for fitting the data of Family A as it only explains 32% of the variation in the data. 
 
 
 ```{r echo = FALSE, fig.asp = 0.5, fig.cap = capFig("Time plot of Family A tre and predicted bought oranges"), fig.align = "center"}
@@ -182,7 +192,7 @@ cor.test(training, fitted(fit.reg), method = "pearson")
 ```
 
 
-__<span style="background-color:#FFE1FF;">Comment</span>__: Figure 2 plots the actual (training) data versus the fitted data. If the predictions are close to the actual values,$\text{R}^2$ is expected to be close to 1. The Pearson correlation test shows that the correlation between these variables is  $\text{R}^2$ = 0.3225668. In this case the model doesn't seem like an appropriate choice for fitting the data of Family A as it only explains 32% of the variation in the data. 
+
 
 
 ```{r echo = FALSE, warning = FALSE, purl = FALSE, message = FALSE, fig.asp = 0.5, fig.cap = capFig("Time plot of Tasman visitors and predicted Tasman visitors"), fig.align = "center"}
@@ -198,6 +208,8 @@ PLOT <- cbind(Data = training, Fitted = fitted(fit.reg)) %>%
     my_theme()
 suppressMessages(PLOT)
 ```
+
+<br>
 
 Note: A plot of the residuals against the fitted values should show no pattern. If a pattern is observed, there may be “heteroscedasticity” in the errors which means that the variance of the residuals may not be constant. 
 
@@ -243,7 +255,7 @@ grid.arrange(p11, p12, ncol = 2)
 
 The ```CV()``` (short for cross-validation statistic) function computes the CV, AIC, AICc and BIC measures of predictive accuracy for a linear model. For these measures, the model fits the data better with the lowest value of CV, AIC, AICc and BIC; the model fits the data better with the highest value for Adjusted $\text{R}^2$. Note: __This is useful when studying the effect of each predictor, but is not particularly useful for forecasting__.
 
-```{r purl = FALSE}
+```{r}
 CV(fit.reg)
 ```
 
@@ -254,6 +266,8 @@ This function's purpose is to select the best predictors to use in a regression 
 
 
 ## Other methods
+
+These methods are going to use the full data (2013-2017) to fit the following methods, instead of using training data. This is so that we could see whether the prediction results would be better now that there is more data to fit the models or will the prediction results stay the same since the data is similar to white noise. The 2018 data is then used as a "test" set in order to find the error values of each model to check their performances. 
 
 <br>
 
@@ -365,17 +379,21 @@ kable(nontrans.results, caption = "Table 3: True values vs. Predicted values for
   kable_styling(full_width = FALSE, position = "center") %>% scroll_box(width = "500px", height = "200px")
 ```
 
+<br>
 
+__<span style="background-color:#FFE1FF;">Comment</span>__: Linear Regression Model with seasonal dummy variables and STL are the only two models that have different prediction value for each month. However these results are still far away from the true data value. Overall the forecast of orange data for Family A is invalid. 
 
 
 
 <br><br>
 
 
+
+
 ## To-Do List 
 :::: {.blackbox data-latex=""}
 <ul>
-<li><input type="checkbox"> Attempt R Shiny : write functions for applying ARIMA method on multiple DoC data sets (Track levels). </li>
+<li><input type="checkbox" checked> Attempt R Shiny : write functions for applying ARIMA method on multiple DoC data sets (Track levels). </li>
 
 <li><input type="checkbox"> Review Dynamic Regression Models as another possible model.</li>
 
