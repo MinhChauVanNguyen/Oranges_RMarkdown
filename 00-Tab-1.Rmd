@@ -10,75 +10,23 @@ output:
      smooth_scroll: TRUE
 ---
 
+<style>
 
-```{r echo = FALSE, warning = FALSE, message = FALSE, purl = FALSE}
-library(xts); library(forecast); library(quantmod); library(ggplot2); library(caret)
-library(seasonal); library(imputeTS); library(fabletools); library(urca); library(tidyverse); library(scales); library(dygraphs); library(DBI); library(RSQLite); library(knitr); library(DT); library(bookdown); library(grid)
-library(gridExtra); library(checkdown); library(kableExtra)
+div.blue pre { background-color:lightblue; }
+div.blue pre.r { background-color:lavender; }
+</style>
 
-my_theme <- function(...) {
-  theme(
-    axis.line = element_line(color = "black"), 
-    axis.text.x = element_text(color = "black", size = 12, lineheight = 0.9),  
-    axis.text.y = element_text(color = "black", size = 12, lineheight = 0.9),  
-    axis.ticks = element_line(color = "black", size = 0.5),  
-    axis.title.x = element_text(color = "black", margin = margin(0, 10, 0, 0), size = 12),  
-    axis.title.y = element_text(color = "black", angle = 90, margin = margin(0, 10, 0, 0), size = 12),  
-    axis.ticks.length = unit(0.5, "lines"), 
-    legend.background = element_rect(color = NULL, fill = "white"),  
-    legend.key = element_rect(color = "black",  fill = "white"),  
-    legend.key.size = unit(1.2, "lines"),  
-    legend.key.height = NULL,  
-    legend.key.width = NULL,      
-    legend.text = element_text(color = "black"),  
-    legend.title = element_text(face = "bold", hjust = 0, color = "black"),  
-    legend.text.align = NULL,  
-    legend.title.align = NULL,  
-    legend.direction = "vertical",  
-    legend.box = NULL, 
-    # axis.line = element_segment(),
-    panel.background = element_rect(fill = NA, color  =  NA),  
-    # panel.border =  element_rect(linetype = "solid", fill = NA, color = "black"),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.spacing = unit(0.5, "lines"),
-    strip.background = element_rect(
-      color = "black", fill = "#FF0066", size= 1.5, linetype="solid"),
-    strip.text.x = element_text(color = "white"),  
-    strip.text.y = element_text(color = "white", angle = -90),  
-    plot.background = element_rect(color = "white", fill = "white"),  
-    plot.title = element_text(color = "black", hjust = 0.5, lineheight = 1.25,
-                              margin = margin(2, 2, 2, 2), face = "bold.italic"),  
-    plot.subtitle = element_text(color = "black", hjust = 0, margin = margin(2, 2, 2, 2)),  
-    plot.caption = element_text(color = "black", hjust = 0),  
-    plot.margin = unit(rep(1, 4), "lines"))
-}
+<div class = "blue">
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+source("library.R")
+source("theme.R")
+source("caption.R")
+source("data.R")
 ```
 
 
-```{r echo = FALSE, purl = FALSE}
-# Determine the output format of the document
-outputFormat = opts_knit$get("rmarkdown.pandoc.to")
 
-# Figure and Table Caption Numbering, for HTML do it manually
-capTabNo = 1; capFigNo = 1;
-
-# Function to add the Table Number
-capTab = function(x){
-  if(outputFormat == 'html'){
-    x = paste0("Table ",capTabNo,". ",x)
-    capTabNo <<- capTabNo + 1
-  }; x
-}
-
-# Function to add the Figure Number
-capFig = function(x){
-  if(outputFormat == 'html'){
-    x = paste0("Figure ",capFigNo,". ",x)
-    capFigNo <<- capFigNo + 1
-  }; x
-}
-```
 
 ******
 
@@ -86,27 +34,29 @@ capFig = function(x){
 
 ## Family A orange data
 
-The data used as an example throughout this report is from **Family A** from **Northland** region. Family A has data recorded from 2013 til 2020, but only data from 2013 til 2018 is used in order to compare between the predicted number oranges and the true number of oranges for 2019. The purpose of this is to examine the realibility of the proposed Time Series models.  
+The data used as an example throughout this report and the second report is from **Family A** from the **Northland** region. Family A has data recorded from 2013 til 2020, and we wish to compare between the predicted number of oranges and the true number of oranges for 2018. The purpose of this is to examine the realibility of the proposed Time Series models.  
 
-
+<br>
+<div style = "width:80%; height:auto; margin: auto;">
 ```{r echo = FALSE, purl = FALSE}
-orange <- read.csv("oranges.csv", header = TRUE)
-familyA <- orange[orange$Name == "A", ]
 ts.A <- ts(familyA$Total, frequency = 12,
            start = c(2013, 1), end = c(2020, 12))
 familyA <- familyA[!(names(familyA) %in% c("Region", "long", "lat", "X", "Name"))]
-DT::datatable(familyA, rownames = FALSE, caption = "Table 1: Family A data summary")
+DT::datatable(familyA, rownames = FALSE, caption = "Table 1: Family A data summary",
+               options = list(lengthMenu = c(5,10,15,20)))
 ```
-
+</div>
 
 
 
 <br>
+<br>
 
 
 
-## Analysis of the data : Scenario 1
-__<span style="background-color:#FFE1FF; font-size:15pt;">Aim : to forecast the number of oranges for 2020</span>__.
+## Analysis of the data
+<br>
+__<span style="background-color:#FFE1FF; font-size:15pt;">Aim : to forecast the number of oranges for 2018</span>__.
 
 :::: {.blackbox data-latex=""}
 ::: {.center data-latex=""}
@@ -116,7 +66,7 @@ __<span style="background-color:#FFE1FF; font-size:15pt;">Aim : to forecast the 
 2. If necessary, use a Box-Cox transformation to stabilize the variance.
 3. If necessary, difference the data until appears stationary.
 4. Plot the ACF/PACF of the differenced data and try to determine possible candidate models.
-5. Run the chosen model and use AICc to select for a better model.
+5. Run the chosen model and use AIC to select for a better model.
 6. Check the residuals by plotting ACF and doing a portmanteau test of the residuals.
 7. If the residuals look like white noise, calculate the forecasts. Otherwise, return to Step 4.
 ::::
@@ -128,37 +78,29 @@ __<span style="background-color:#FFE1FF; font-size:15pt;">Aim : to forecast the 
 ```{r  echo = FALSE, fig.asp = 0.5, fig.cap = capFig("Monthly Data Time Series Plot"), fig.align = "center", purl = FALSE}
 ts.A <- ts(familyA$Total, frequency = 12,
            start = c(2013, 1), end = c(2019, 12))
-autoplot(ts.A, lwd = 0.7) + 
-  geom_line(color = "cyan") +
-  geom_point(color = "cyan") +
+autoplot(ts.A) + 
+  geom_line(color = "#6495ED") +
+  geom_point(color = "#6495ED") +
   my_theme() +
   ggtitle("Monthly oranges bought: Family A") + 
   xlab("Year") + ylab("Number of Oranges bought per month") +
   geom_vline(xintercept = 2013:2020, linetype = "dotted")
 ```
 
-__<span style="background-color:#FFE1FF;">Comment</span>__: The data shows no particular trend, strong cyclic behavior and there seems to be an unusual pattern between 2015 and 2016. In addition, the mean is not constant, i.e. changes over time, implying non-stationarity. Hence it is sensible to remove data from 2013 up to 2015 to avoid invalid statistical results. 
+<br>
 
-```{r  echo = FALSE, fig.asp = 0.5, fig.cap = capFig("Monthly Data Time Series Plot"), fig.align = "center", purl = FALSE}
-tsA <- ts(familyA$Total, frequency = 12,
-           start = c(2013, 1), end = c(2019, 12))
-autoplot(tsA, lwd = 0.7) + 
-  geom_line(color = "cyan") +
-  geom_point(color = "cyan") +
-  my_theme() +
-  ggtitle("Monthly oranges bought: Family A") + 
-  xlab("Year") + ylab("Number of Oranges bought per month") +
-  geom_vline(xintercept = 2013:2020, linetype = "dotted")
-```
+__<span style="background-color:#FFE1FF;">Comment</span>__: The data shows no particular trend, strong cyclic behavior and there seems to be an unusual pattern between 2015 and 2016. In addition, the mean is not constant, i.e. changes over time, implying non-stationarity. It might be sensible to remove data from 2013 up to 2015 to avoid invalid statistical results. 
+
+<br>
 
 
 
 ```{r echo = FALSE, fig.asp = 0.5, fig.cap = capFig("New Time Series Monthly Data"), fig.align = "center", purl = FALSE}
-new.tsA <- window(tsA, start = c(2016, 1))
+new.tsA <- window(ts.A, start = c(2016, 1))
 
 autoplot(new.tsA, series = "Real Data") + 
-  geom_line(color = "cyan") +
-  geom_point(color = "cyan") +
+  geom_line(color = "#6495ED") +
+  geom_point(color = "#6495ED") +
   my_theme() +
   ggtitle("Monthly oranges bought: Family A") + 
   xlab("Year") + ylab("Number of Oranges bought per month") +
@@ -166,49 +108,59 @@ autoplot(new.tsA, series = "Real Data") +
   my_theme()
 ```
 
+<br>
+__<span style="background-color:#FFE1FF;">Comment</span>__: Since the data is recorded at monthly interval, we would expect to see some seasonility patterns in the time series plot. However, data was generated randomly which results in the data sort of behaving like white noise though non-stationarity is still strongly implied. 
 
 ```{r echo = FALSE, fig.asp = 0.5, fig.cap = capFig("New Time Series Monthly Data vs. Seasonally adjusted"), fig.align = "center", purl = FALSE}
 seasadj.A <- seasadj(stl(new.tsA, s.window = "periodic"))
 
 autoplot(new.tsA, series = "Real Data") + 
-  autolayer(seasadj.A, series = "Seasonally Adjusted", lwd = 1) + 
+  autolayer(seasadj.A, series = "Seasonally Adjusted") + 
   guides(color = guide_legend(title = "Series")) +
-  scale_color_manual(values = c("grey", "cyan")) + 
+  scale_color_manual(values = c("#7CFC00", "#6495ED")) + 
   xlab("Year") + ylab("") + 
   ggtitle("Real data vs. Seasonally adjusted data") +
   my_theme()
 ```
 
+>White noise is an important concept in time series analysis and forecasting. It is important for two main reasons:
+**Predictability**: If your time series is white noise, then, by definition, it is random. You cannot reasonably model it and make predictions.
+**Model Diagnostics**: The series of errors from a time series forecast model should ideally be white noise.
 
+<br>
 ```{r echo = FALSE, fig.asp = 0.5, fig.cap = capFig("STL decompostion of additive components"), fig.align = "center", purl = FALSE}
 new.tsA %>% stl(t.window = 13, s.window = "periodic", robust = TRUE) %>%
-  autoplot() + geom_line(color = "cyan") + 
+  autoplot() + geom_line(color = "#6495ED") + 
   my_theme()
 ```
+
+<br>
 
 The decompositon of the Family A data uses the __STL__ method. STL is an acronym for _“Seasonal and Trend decomposition using Loess”_, while Loess is a method for estimating non-linear relationships. It only provides facilities for additive decompositions. 
 
-```{r echo = FALSE, purl = FALSE, fig.cap = capFig("ACF plot of the Tasman data"), fig.asp = 0.5, fig.align = "center"}
+```{r echo = FALSE, purl = FALSE, fig.cap = capFig("ACF plot of the Tasman data"), fig.asp = 0.5, fig.align = "center", fig.width = 4}
 ci0 <- qnorm((1 + 0.95)/2)/sqrt(length(new.tsA))
 ggAcf(new.tsA) +
-  geom_segment(lineend = "butt", color = "cyan") +
-  geom_hline(yintercept = 0, color = "cyan") +
-  geom_hline(yintercept = c(ci0, -ci0), color = "#FFFF00", linetype = "dashed") +
+  geom_segment(lineend = "butt", color = "#6495ED") +
+  geom_hline(yintercept = 0, color = "#6495ED") +
+  geom_hline(yintercept = c(ci0, -ci0), color = "#FFA500", linetype = "dashed") +
   my_theme()
 ```
 
-In the above ACF plot, the dashed yellow lines indicates whether the autocorrelations are (statistically) significantly different from zero within 95% confidence limits. Here the autocorrelations are significantly different from 0, indicating high autocorrelation.  
+<br>
+__<span style="background-color:#FFE1FF;">Comment</span>__: In the above ACF plot, the dashed orange lines indicates whether the autocorrelations are (statistically) significantly different from zero within 95% confidence limits. Here the autocorrelations are significantly different from 0, indicating high autocorrelation.  
 
 <br>
+
 <span style="font-size:13pt; font-style:italic; font-style:bold"> Step 2. Split the data into training and test sets</span>.
 
 The accuracy of forecasts can only be determined by considering how well a model performs on new data that were not used when fitting the model. <span style="background-color:#FFE1FF"> When choosing models, it is common practice to separate the available data into two portions, training and test sets, where the training data is used to fit a forecasting method and the test data is used to evaluate its accuracy.</span> Because the test data is not used in determining the forecasts, it should provide a reliable indication of how well the model is likely to forecast on new data.
 
 
 ```{r}
-# The data is split into training set (Jan,2017-Dec,2018) and test set (2019).
-training <- window(new.tsA, start = c(2016,1), end = c(2018,12))
-test <- window(new.tsA, start = 2019)
+# The data is split into training set (Jan,2016-Dec,2017) and test set (2018).
+training <- window(new.tsA, start = c(2016,1), end = c(2017,12))
+test <- window(new.tsA, start = c(2018,1), end = c(2018, 12))
 ```
 
 
@@ -218,58 +170,66 @@ test <- window(new.tsA, start = 2019)
 
 __Box-Cox transformations__ is a family of transformations, that includes both logarithms and power transformations, used to transform the Family A data. This is recommended as the __Hyndman-Khandakar__ algorithm of the ```auto.arima()``` function only takes care of step 3-5 thus we still have to do steps 1, 2, 6 and 7 manually  to ensure the residuals will be roughly homoscedastic. One important feature of __power transformation__ is the $\lambda$ parameter, where $\lambda = 0$ is equivalent to a log-transformation. A good value of $\lambda$ is one which makes the size of the seasonal variation about the same across the whole series, as that makes the forecasting model simpler. The ```BoxCox.lambda()``` function can be used for choosing $\lambda$ automatically instead of doing it manually. 
 
+
 ```{r, purl = FALSE}
 lambda <- BoxCox.lambda(training)
 trans.A <- BoxCox(training, lambda)
 lambda
 ```
 
-The optimal value of $\lambda$ is 1.462446.  _Note_: If transformation is required, the data must be transformed AFTER being split into training and test sets in order to avoid data leakage, that is only the training data is transformed and not the test data.
+<br>
+The optimal value of $\lambda$ is 1, this is equivalent to $Y^{\lambda} = Y^1 = Y$ hence data transformation is not necessary. _Note_: If transformation was to be required, the data must be transformed AFTER being split into training and test sets in order to avoid data leakage, that is only the training data is transformed and not the test data.
 
 <br>
 <span style="font-size:13pt; font-style:italic; font-style:bold"> Step 4. Fit the models</span>.
-
-
 In this step, two methods were considered to fit and predict the data. The methods used are ARIMA (```auto.arima()```) and ETS (```ets()```) models. 
+
+<br>
 
 #### METHOD 1: ARIMA MODEL
 
 The ```auto.arima()``` function in R  uses an algorithm which combines unit root tests, minimisation of the AICc and MLE to obtain an ARIMA model. The arguments ```stepwise = FALSE``` and ```approximation = FALSE```are included in the below ```auto.arima()``` function to ensure ALL fitted seasonal ARIMA models are considered. The ARIMA model overall has the form : $$ARIMA(p,d,q)(P,D,Q)[m]$$, where ```p``` is the order of the _Autoregressive model_, ```d``` is the order of differencing and ```q``` is the order of the _Moving Average model_. ```(P,D,Q)``` is the same but are defined in the context of seasonality;. The final chosen model returned then has the form : $ARIMA(1,0,0)$. 
 
 
-```{r, purl = FALSE}
-auto.arima.model <- auto.arima(training, stepwise = FALSE, approximation = FALSE, lambda = lambda)
+```{r, purl = FALSE, warning = FALSE, message = FALSE}
+auto.arima.model <- auto.arima(training, stepwise = FALSE, approximation = FALSE)
 auto.arima.model
 ```
 
 
+<br>
+
+__<span style="background-color:#FFE1FF;">Comment</span>__: An ARIMA(0,0,0) model with zero mean is white noise, so it means that the errors are uncorrelated across time.
+
+<br>
 
 ```{r echo = FALSE, message = FALSE, purl = FALSE, fig.width = 8, fig.height = 3, fig.align = "center"}
 autoplot(resid(auto.arima.model)) +
-  geom_line(color = "cyan") +
+  geom_line(color = "#6495ED") +
   my_theme() +
-  ggtitle("Residuals of ARIMA(1,0,0)") + 
+  ggtitle("Residuals of ARIMA(0,0,0)") + 
   xlab("Year") + ylab("") 
 ```
 
 
-```{r echo = FALSE, purl = FALSE, message = FALSE, warning = FALSE, fig.width = 8, fig.height = 3, fig.ncol = 1, fig.cap = capFig("Residuals of ARIMA(0,0,0)(0,1,0)[12] model"), fig.align = "center"}
+```{r echo = FALSE, purl = FALSE, message = FALSE, warning = FALSE, fig.width = 8, fig.height = 3, fig.ncol = 1, fig.cap = capFig("Residuals of ARIMA(0,0,0) model"), fig.align = "center"}
 ci1 <- qnorm((1 + 0.95)/2)/sqrt(length(resid(auto.arima.model)))
 ggAcf(resid(auto.arima.model)) +
-  geom_segment(lineend = "butt", color = "cyan") +
-  geom_hline(yintercept = 0, color = "cyan") +
-  geom_hline(yintercept = c(ci1, -ci1), color = "#FFFF00", linetype = "dashed") +
+  geom_segment(lineend = "butt", color = "#6495ED") +
+  geom_hline(yintercept = 0, color = "#6495ED") +
+  geom_hline(yintercept = c(ci1, -ci1), color = "#FFA500", linetype = "dashed") +
   my_theme(panel.border =  element_rect(fill = NA, color = "#00CC99", linetype = "solid")) -> p3
 
 update_geom_defaults("line", list(color = "darkblue"))
-update_geom_defaults("bar", list(fill = "cyan"))
+update_geom_defaults("bar", list(fill = "#6495ED"))
 gghistogram(resid(auto.arima.model), add.rug = TRUE, add.normal = TRUE) + ggtitle("Histogram of residuals") + my_theme() + geom_line() -> p4
 
 grid.arrange(p3, p4, ncol = 2)
-Box.test(resid(auto.arima.model), type = "Lj", lag = 24, fitdf = 0)
+
+Box.test(resid(auto.arima.model), type = "Lj", lag = 12, fitdf = 0)
 ```
 
-The ACF plot of the residuals from the chosen ARIMA model shows that all autocorrelations are within the threshold limits indicating that the residuals are behaving like white noise. The histogram suggests that the residuals may not be normal - the right tail seems a little too long for a normal distribution. The Box-Ljung test returns a large p-value (p-value = 0.484), also suggesting that the residuals resemble white noise. 
+The ACF plot of the residuals from the chosen ARIMA model shows that all autocorrelations are within the threshold limits indicating that the residuals are behaving like white noise. The histogram suggests that the residuals may not follow a Normal distribution. The Box-Ljung test returns a large p-value (p-value = 0.2184), also suggesting that the residuals resemble white noise. 
 
 <br>
 
@@ -277,15 +237,15 @@ The ACF plot of the residuals from the chosen ARIMA model shows that all autocor
 In the case of ETS (Error, Trend, Seasonal) models, the ```ets()``` function can be used to fit these types of model. The notation for each component is defined as Error = {A,M}, Trend = {N,A,Ad} and Seasonal = {N,A,M}, where _A_ stands for _additive_ and _M_ stands for _multiplicative_. 
 
 ```{r purl = FALSE}
-ets.model <- ets(training, lambda = lambda)
+ets.model <- ets(training)
 ets.model
 ```
 
-The best ETS model selected is the $ETS(A,N,N)$, as shown in the result above. Formally, this model is also known as the simple smoothing with additive errors model. In comparison to the $ARIMA(1,0,0)$ model, the ETS model has a <span style="background-color:#FFE1FF;">higher AIC value of 437.7586 (the ARIMA model's AICc value is 405.29)</span>.
+The best ETS model selected is the $ETS(A,N,N)$, as shown in the result above. Formally, this model is also known as the simple smoothing with additive errors model. In comparison to the $ARIMA(0,0,0)$ model, the ETS model has a <span style="background-color:#FFE1FF;">higher AIC value of 215.2654 (the ARIMA model's AIC value is 205.1)</span>.
 
 ```{r echo = FALSE, message = FALSE, purl = FALSE, fig.width = 8, fig.height = 3, fig.align = "center"}
 autoplot(resid(ets.model)) +
-  geom_line(color = "cyan") +
+  geom_line(color = "#6495ED") +
   my_theme() +
   ggtitle("Residuals of ETS(A,N,N)") + 
   xlab("Year") + ylab("") 
@@ -295,100 +255,55 @@ autoplot(resid(ets.model)) +
 ```{r echo = FALSE, message = FALSE, purl = FALSE, warning = FALSE, fig.width = 8, fig.height = 3, fig.ncol = 1, fig.cap = capFig("Residuals of ETS(A,N,A) model"), fig.align = "center"}
 ci2 <- qnorm((1 + 0.95)/2)/sqrt(length(resid(ets.model)))
 ggAcf(resid(ets.model)) +
-  geom_segment(lineend = "butt", color = "cyan") +
-  geom_hline(yintercept = 0, color = "cyan") +
-  geom_hline(yintercept = c(ci2, -ci2), color = "#FFFF00", linetype = "dashed") +
+  geom_segment(lineend = "butt", color = "#6495ED") +
+  geom_hline(yintercept = 0, color = "#6495ED") +
+  geom_hline(yintercept = c(ci2, -ci2), color = "#FFA500", linetype = "dashed") +
   my_theme() -> p5
 
 update_geom_defaults("line", list(color = "darkblue"))
-update_geom_defaults("bar", list(fill = "cyan"))
+update_geom_defaults("bar", list(fill = "#6495ED"))
 gghistogram(resid(ets.model), add.rug = TRUE, add.normal = TRUE) + ggtitle("Histogram of residuals") + my_theme() + geom_line() -> p6
 grid.arrange(p5, p6, ncol = 2)
 
-Box.test(resid(ets.model), type = "Lj", lag = 24, fitdf = 0)
+Box.test(resid(ets.model), type = "Lj", lag = 14, fitdf = 0)
 ```
 
 
-The ACF plot of the residuals from the chosen ETS model on the hand shows that not all autocorrelations are within the threshold limits indicating that the residuals are bot behaving like white noise. The histogram suggests that the residuals don't follow a Normal distribution.  The Box-Ljung test returns a small p-value (<span style="background-color:#FFE1FF;">p-value = 0.007491</span>), againsuggesting that the residuals do not resemble white noise. 
+The ACF plot of the residuals from the chosen ETS model shows that all autocorrelations are within the threshold limits indicating that the residuals are bot behaving like white noise. The histogram suggests that the residuals don't follow a Normal distribution.  The Box-Ljung test returns a large p-value (<span style="background-color:#FFE1FF;">p-value = 0.2676</span>), again suggesting that the residuals resemble white noise. 
 
 <br>
+
 <span style="font-size:13pt; font-style:italic; font-style:bold"> Step 5. Forecast the data using the fitted models</span>.
 
 >Only one thing is true about forecasts - they are always wrong.
 
 The ```forecast()``` function can be implemented in order to obtain forecasts from an ARIMA or an ETS model. Having done a transformation on the data, it is necessary to reverse the transformation (or back-transform) when forecasting the transformed data to obtain forecasts on the original scale. This can be done in R by adding the ```$\lambda$``` (equal to the $\lambda$ value selected for transforming the data) argument to the ```forecast()``` function. In addition, the ```biasadj = TRUE``` argument indicates that the mean of the forecasts is used and this mean is biased, whereas when ```biasadj = FALSE``` (default) the median of the forecasts is used and is not biased.
 
+<br>
+
 ##### ARIMA(1,0,0) MODEL
 
 ```{r echo = FALSE, message = FALSE, purl = FALSE, warning = FALSE, fig.asp = 0.5, fig.cap = capFig("Forecasts for the seasonally adjusted Tasman data"), fig.align = "center"}
-ARIMA.mean <- forecast(auto.arima.model, level = c(30,50,70), h = 12, lambda = lambda, biasadj = TRUE)
+source("dygraph.R")
 
-graph <- cbind(actuals = ARIMA.mean$x, pointfc_mean = ARIMA.mean$mean,
-      lower_70 = ARIMA.mean$lower[,"70%"], upper_70 = ARIMA.mean$upper[,"70%"],
-      lower_50 = ARIMA.mean$lower[,"50%"], upper_50 = ARIMA.mean$upper[,"50%"],
-      lower_30 = ARIMA.mean$lower[,"30%"], upper_30 = ARIMA.mean$upper[,"30%"])
+ARIMA.mean <- forecast(auto.arima.model, level = c(30,50,70), h = 12, biasadj = TRUE)
 
-interval_value_formatter <- "function(num, opts, seriesName, g, row, col) {
-  value = g.getValue(row, col);
-  if(value[0] != value[2]) {
-    lower = Dygraph.numberValueFormatter(value[0], opts);
-    upper = Dygraph.numberValueFormatter(value[2], opts);
-    return '[' + lower + ', ' + upper + ']';
-  } else {
-    return Dygraph.numberValueFormatter(num, opts);
-  }
-}"
-
-dygraph(graph, main = ARIMA.mean$method, height = '400px', width = '100%', ylab = "Monthly Orange bought") %>%
-  dySeries(name = "actuals") %>%
-  dySeries(name = "pointfc_mean", label = "forecast") %>%
-  dySeries(name = c("lower_30", "pointfc_mean", "upper_30"), label = "30% PI") %>%
-  dySeries(name = c("lower_50", "pointfc_mean", "upper_50"), label = "50% PI") %>%
-  dySeries(name = c("lower_70", "pointfc_mean", "upper_70"), label = "70% PI") %>%
-  dyLegend(show = "always", hideOnMouseOut = FALSE, labelsSeparateLines = TRUE) %>%
-  dyAxis("y", valueFormatter = interval_value_formatter, label = "Monthly Vistors (thousands)") %>%
-  dyAxis("x", axisLabelFormatter = 'function(d){ var month = d.getMonth().toString().fontsize(3) ;var year = d.getFullYear().toString().fontsize(3); return  year}') %>%
-  dyHighlight(highlightCircleSize = 5, 
-              highlightSeriesOpts = list(strokeWidth = 2)) %>%
-  dyCSS(textConnection(".dygraph-legend { left: 70px !important;
-  background-color: rgba(255, 255, 255, 0.5) !important; }
-  .dygraph-title {color: navy; font-weight: bold;}
-  .dygraph-axis-label {font-size: 11px;}")) %>%
-  dyOptions(labelsKMB = "K", axisLineColor = "navy", gridLineColor = "grey", 
-            digitsAfterDecimal = 1, colors = c("black", "#FF3399", "#00CCFF", "#33FF00"))
+dygraph.func(mode = ARIMA.mean, main = paste("Forecast from", ARIMA.mean$method))
 ```
 
+<br>
 
 ##### ETS(A,N,A) MODEL
 
 ```{r echo = FALSE, message = FALSE, warning = FALSE, purl = FALSE, fig.asp = 0.5, fig.cap = capFig("Forecasts for the seasonally adjusted Tasman data"), fig.align = "center"}
 ETS.mean <- forecast(ets.model, h = 12, biasadj = TRUE, level = c(30,50,70), lambda = lambda)
 
-graph.ets <- cbind(actuals = ETS.mean$x, pointfc_mean = ETS.mean$mean,
-      lower_30 = ETS.mean$lower[,"30%"], upper_30 = ETS.mean$upper[,"30%"],
-      lower_50 = ETS.mean$lower[,"50%"], upper_50 = ETS.mean$upper[,"50%"],
-      lower_70 = ETS.mean$lower[,"70%"], upper_70 = ETS.mean$upper[,"70%"])
-
-dygraph(graph.ets, main = "Forecasts from ETS(M,N,N)", height = '400px', width = '100%', ylab = "Monthly Tasman Visitors") %>%
-  dySeries(name = "actuals") %>%
-  dySeries(name = "pointfc_mean", label = "forecast") %>%
-  dySeries(name = c("lower_30", "pointfc_mean", "upper_30"), label = "30% PI") %>%
-  dySeries(name = c("lower_50", "pointfc_mean", "upper_50"), label = "50% PI") %>%
-  dySeries(name = c("lower_70", "pointfc_mean", "upper_70"), label = "70% PI") %>%
-  dyLegend(show = "always", hideOnMouseOut = FALSE, labelsSeparateLines = TRUE) %>%
-  dyAxis("y", valueFormatter = interval_value_formatter, label = "Monthly Vistors (thousands)") %>%
-  dyHighlight(highlightCircleSize = 5,
-              highlightSeriesOpts = list(strokeWidth = 2)) %>%
-  dyCSS(textConnection(".dygraph-legend { left: 70px !important;
-  background-color: rgba(255, 255, 255, 0.5) !important; }
-  .dygraph-title {color: navy; font-weight: bold;}
-  .dygraph-axis-label {font-size: 11px;}")) %>%
-  dyOptions(labelsKMB = "K", axisLineColor = "navy", gridLineColor = "grey", 
-            digitsAfterDecimal = 1, colors = c("black", "#FF3399", "#00CCFF", "#33FF00"))
+dygraph.func(model = ETS.mean, main = paste("Forecast from", ETS.mean$model$method))
 ```
 
+<br>
 
-#### ARIMA VS. ETS 
+## ARIMA VS. ETS 
 
 While linear exponential smoothing models are all special cases of ARIMA models, the non-linear exponential smoothing models have no equivalent ARIMA counterparts. On the other hand, there are also many ARIMA models that have no exponential smoothing counterparts. In particular, all ETS models are non-stationary, while some ARIMA models are stationary.
 
@@ -403,7 +318,9 @@ a2 <- ets.model %>% forecast(h = 12) %>%
   accuracy(test)
 a2[,c("RMSE", "MAE", "MAPE", "MASE")]
 ```
-The R output shows the forecasting performance of the two competing models over the test data. In this case the ETS model seems to be the slightly more accurate model based on the test set RMSE, MAPE and MASE though the ARIMA model fits the training data slightly better than the ETS model.  The output table shows the point forecasts for the ARIMA model are over-estimated against the real data whereas the point forecasts for the ETS model are all the same value for each month. 
+
+<br>
+__<span style="background-color:#FFE1FF;">Comment</span>__: The R output shows similar error values regarding the forecasting performance of the two competing models over the test data.
 
 
 
@@ -412,19 +329,19 @@ require(pander)
 panderOptions('table.split.table', Inf)
 set.caption("Table 2: True values vs. Predicted values")
 my.data <- "
-     2019 | True Data   | Predicted ARIMA | Predicted ETS 
-     Jan  | 0      | 33           | 27        
-     Feb  | 19      | 24           | 27          
-     Mar  | 47      | 28          | 27        
-     Apr  | 2        | 27          | 27        
-     May  | 46        | 27           | 27          
-     Jun  | 15        | 27             | 27          
-     Jul  | 49        | 27             | 27          
-     Aug  | 3        | 27             | 27          
-     Sep  | 33        | 27             | 27          
-     Oct  | 22        | 27           | 27          
-     Nov  | 47      | 27           | 27        
-     Dec  | 25      | 27           | 27        "
+     2018 | True Data   | Predicted ARIMA | Predicted ETS 
+     Jan  | 10      | 27           | 27        
+     Feb  | 42      | 27           | 27          
+     Mar  | 8      | 27          | 27        
+     Apr  | 37        | 27          | 27        
+     May  | 31        | 27           | 27          
+     Jun  | 19        | 27             | 27          
+     Jul  | 16        | 27             | 27          
+     Aug  | 45       | 27             | 27          
+     Sep  | 14        | 27             | 27          
+     Oct  | 43        | 27           | 27          
+     Nov  | 33      | 27           | 27        
+     Dec  | 9      | 27           | 27        "
 
 df <- read.delim(textConnection(my.data),header = FALSE, sep = "|", strip.white = TRUE, stringsAsFactors = FALSE)
 names(df) <- unname(as.list(df[1,])) # put headers on
@@ -433,227 +350,27 @@ row.names(df) <- NULL
 pander(df, style = 'rmarkdown')
 ```
 
-<br><br>
-
-
-## Analysis of the data : Scenario 2
-
-The analysis of the Family A data without transformation (skipping Step 3) is summarized in this section. 
-
-<span style="font-size:13pt; font-style:italic; font-style:bold"> Step 5. Fit the models</span>.
-
-
-### METHOD 1 : ARIMA MODEL
-
-
-The best model as shown in the output is the __ARIMA(1,0,0)(0,1,0)[12]__ with drift with AIC = 298.27. 
-
-```{r echo = FALSE, purl = FALSE}
-auto.arima.model2 <- auto.arima(training, stepwise = FALSE, approximation = FALSE)
-auto.arima.model2
-```
-
-
-
-```{r echo = FALSE, message = FALSE, purl = FALSE, fig.width = 8, fig.height = 3, fig.align = "center"}
-autoplot(resid(auto.arima.model2)) +
-  geom_line(color = "cyan") +
-  my_theme() +
-  ggtitle("Residuals of ARIMA(1,0,0) with non-zero mean") + 
-  xlab("Year") + ylab("") 
-```
-
-
-```{r echo = FALSE, message = FALSE, warning = FALSE, purl = FALSE, fig.width = 8, fig.height = 3, fig.ncol = 1, fig.cap = capFig("Residuals of ARIMA(1,0,0)(0,1,0)[12] model"), fig.align = "center"}
-ci3 <- qnorm((1 + 0.95)/2)/sqrt(length(resid(auto.arima.model2)))
-ggAcf(resid(auto.arima.model2)) +
-  geom_segment(lineend = "butt", color = "cyan") +
-  geom_hline(yintercept = 0, color = "cyan") +
-  geom_hline(yintercept = c(ci3, -ci3), color = "#FFFF00", linetype = "dashed") +
-  my_theme() -> p7
-
-update_geom_defaults("line", list(color = "darkblue"))
-update_geom_defaults("bar", list(fill = "cyan"))
-gghistogram(resid(auto.arima.model2), add.rug = TRUE, add.normal = TRUE) + ggtitle("Histogram of residuals") + my_theme() + geom_line() -> p8
-
-grid.arrange(p7, p8, ncol = 2)
-Box.test(resid(auto.arima.model2), type = "Lj", lag = 24, fitdf = 0)
-```
-
-The ACF plot of the residuals from the chosen ARIMA model shows that all autocorrelations are within the threshold limits indicating that the residuals are behaving like white noise. The histogram suggests that the residuals appear to roughly follow a normal distribution. The Box-Ljung test returns a large p-value (p-value = 0.5181), also suggesting that the residuals resemble white noise. 
-
-
-### METHOD 2 : ETS MODEL
-
-The best ETS model selected is the $ETS(M,N,N)$, as shown in the result above. Formally, this model is also known as the seasonal multiplicative Holt's Winters model with multiplicative errors. In comparison to the $ARIMA(1,0,0)$ model, the ETS model has a <span style="background-color:#FFE1FF;">higher AIC value of 331.2937 (the ARIMA model's AIC value is 298.27)</span>.
-
-```{r purl = FALSE}
-ets.model2 <- ets(training)
-ets.model2
-```
-
-
-
-```{r echo = FALSE, message = FALSE, purl = FALSE, fig.width = 8, fig.height = 3, fig.align = "center"}
-autoplot(resid(ets.model2)) +
-  geom_line(color = "cyan") +
-  my_theme() +
-  ggtitle("Residuals of ETS(M,N,N)") + 
-  xlab("Year") + ylab("") 
-```
-
-
-```{r echo = FALSE, message = FALSE, warning = FALSE, purl = FALSE, fig.width = 8, fig.height = 3, fig.ncol = 1, fig.cap = capFig("Residuals of ETS(M,N,M) model"), fig.align = "center"}
-ci3 <- qnorm((1 + 0.95)/2)/sqrt(length(resid(ets.model2)))
-ggAcf(resid(ets.model2)) +
-  geom_segment(lineend = "butt", color = "cyan") +
-  geom_hline(yintercept = 0, color = "cyan") +
-  geom_hline(yintercept = c(ci3, -ci3), color = "#FFFF00", linetype = "dashed") +
-  my_theme() -> p9
-
-update_geom_defaults("line", list(color = "darkblue"))
-update_geom_defaults("bar", list(fill = "cyan"))
-gghistogram(resid(ets.model2), add.rug = TRUE, add.normal = TRUE) + ggtitle("Histogram of residuals") + my_theme() + geom_line() -> p10
-
-grid.arrange(p9, p10, ncol = 2)
-
-Box.test(resid(ets.model2), type = "Lj", lag = 24, fitdf = 0)
-```
-
-
-The ACF plot of the residuals from the chosen ETS model shows that not all autocorrelations are within the threshold limits indicating that the residuals aren't behaving like white noise. However, the histogram suggests that the residuals may not be normal. The Box-Ljung test returns a very small p-value (<span style="background-color:#FFE1FF;">p-value = 0.002358</span>), also suggesting that the residuals do not resemble white noise. 
-
 <br>
 
-<span style="font-size:13pt; font-style:italic; font-style:bold"> Step 4. Forecast the data using the fitted models</span>.
-
-
-
-#### ARIMA(1,0,0)MODEL
-
-```{r echo = FALSE, message = FALSE, purl = FALSE, warning = FALSE, fig.asp = 0.5, fig.cap = capFig("Forecasts for the seasonally adjusted Tasman data"), fig.align = "center"}
-ARIMA.mean2 <- forecast(auto.arima.model2, h = 12, biasadj = TRUE, level = c(30,50,70))
-
-graph2 <- cbind(actuals = ARIMA.mean2$x, pointfc_mean = ARIMA.mean2$mean,
-      lower_30 = ARIMA.mean2$lower[,"30%"], upper_30 = ARIMA.mean2$upper[,"30%"],
-      lower_50 = ARIMA.mean2$lower[,"50%"], upper_50 = ARIMA.mean2$upper[,"50%"],
-      lower_70 = ARIMA.mean2$lower[,"70%"], upper_70 = ARIMA.mean2$upper[,"70%"])
-
-dygraph(graph2, main = "Forecasts from ARIMA(1,0,0)(0,1,0)[12]", height = '400px', width = '100%', ylab = "Monthly Oranges bought") %>%
-  dySeries(name = "actuals") %>%
-  dySeries(name = "pointfc_mean", label = "forecast") %>%
-  dySeries(name = c("lower_30", "pointfc_mean", "upper_30"), label = "30% PI") %>%
-  dySeries(name = c("lower_50", "pointfc_mean", "upper_50"), label = "50% PI") %>%
-  dySeries(name = c("lower_70", "pointfc_mean", "upper_70"), label = "70% PI") %>%
-  dyLegend(show = "always", hideOnMouseOut = FALSE, labelsSeparateLines = TRUE) %>%
-  dyAxis("y", valueFormatter = interval_value_formatter) %>%
-  dyHighlight(highlightCircleSize = 5,
-              highlightSeriesOpts = list(strokeWidth = 2)) %>%
-  dyCSS(textConnection(".dygraph-legend { left: 70px !important;
-  background-color: rgba(255, 255, 255, 0.5) !important; }
-  .dygraph-title {color: navy; font-weight: bold;}
-  .dygraph-axis-label {font-size: 11px;}")) %>%
-  dyOptions(labelsKMB = "K", axisLineColor = "navy", gridLineColor = "grey", 
-            digitsAfterDecimal = 1, colors = c("black", "#FF3399", "#00CCFF", "#33FF00"))
-```
-
-
-#### ETS(M,N,M) MODEL
-
-```{r echo = FALSE, message = FALSE, purl = FALSE, warning = FALSE, fig.asp = 0.5, fig.cap = capFig("Forecasts for the seasonally adjusted Tasman data"), fig.align = "center"}
-ETS.mean2 <- forecast(ets.model2, h = 12, biasadj = TRUE, level = c(30,50,70))
-
-graph2.ets <- cbind(actuals = ETS.mean2$x, pointfc_mean = ETS.mean2$mean,
-      lower_30 = ETS.mean2$lower[,"30%"], upper_30 = ETS.mean2$upper[,"30%"],
-      lower_50 = ETS.mean2$lower[,"50%"], upper_50 = ETS.mean2$upper[,"50%"],
-      lower_70 = ETS.mean2$lower[,"70%"], upper_70 = ETS.mean2$upper[,"70%"])
-
-dygraph(graph2.ets, main = "Forecasts from ETS(M,N,N)", height = '400px', width = '100%', ylab = "Monthly Oranges bought") %>%
-  dySeries(name = "actuals") %>%
-  dySeries(name = "pointfc_mean", label = "forecast") %>%
-  dySeries(name = c("lower_30", "pointfc_mean", "upper_30"), label = "30% PI") %>%
-  dySeries(name = c("lower_50", "pointfc_mean", "upper_50"), label = "50% PI") %>%
-  dySeries(name = c("lower_70", "pointfc_mean", "upper_70"), label = "70% PI") %>%
-  dyLegend(show = "always", hideOnMouseOut = FALSE, labelsSeparateLines = TRUE) %>%
-  dyAxis("y", valueFormatter = interval_value_formatter) %>%
-  dyHighlight(highlightCircleSize = 5,
-              highlightSeriesOpts = list(strokeWidth = 2)) %>%
-  dyCSS(textConnection(".dygraph-legend { left: 70px !important;
-  background-color: rgba(255, 255, 255, 0.5) !important; }
-  .dygraph-title {color: navy; font-weight: bold;}
-  .dygraph-axis-label {font-size: 11px;}")) %>%
-  dyOptions(labelsKMB = "K", axisLineColor = "navy", gridLineColor = "grey", 
-            digitsAfterDecimal = 1, colors = c("black", "#FF3399", "#00CCFF", "#33FF00"))
-```
-
-
-```{r echo = FALSE, message = FALSE, purl = FALSE, warnings = FALSE, results = 'asis'}
-require(pander)
-panderOptions('table.split.table', Inf)
-set.caption("Table 4: True values vs. Predicted values")
-my.data2 <- "
-     2019 | True Data   | Predicted ARIMA | Predicted ETS 
-     Jan  | 0      | 34           | 27        
-     Feb  | 19      | 24           | 27          
-     Mar  | 47      | 28          | 27        
-     Apr  | 2        | 26          | 27        
-     May  | 46        | 27           | 27          
-     Jun  | 15        | 27             | 27          
-     Jul  | 49        | 27             | 27          
-     Aug  | 3        | 27             | 27          
-     Sep  | 33        | 27             | 27          
-     Oct  | 22        | 27           | 27          
-     Nov  | 47     | 27           | 27        
-     Dec  | 25      | 27           | 27        "
-
-df2 <- read.delim(textConnection(my.data2) ,header = FALSE, sep = "|", strip.white = TRUE, stringsAsFactors = FALSE)
-names(df2) <- unname(as.list(df2[1,])) # put headers on
-df2 <- df2[-1,] # remove first row
-row.names(df2) <- NULL
-pander(df2, style = 'rmarkdown')
-```
-
-
-### SUMMARY
-Overall the transformed data for both models have lower AIC than that for the non-transformed data. The forecasts from the non-transformed data are similar to the transformed data for both models. This could be due to the reason $\lambda = 1.4$ which can be assumed as $\lambda = 1$, and $Y^{\lambda} = Y^1 = Y$.
-
-```{r echo = FALSE, message = FALSE, purl = FALSE, warning = FALSE, results = 'asis'}
-require(pander)
-panderOptions('table.split.table', Inf)
-set.caption("Table 4: Summary of Results")
-my.data5 <- 
-"Types of Data|ARIMA|ETS|AIC for ARIMA|AIC for ETS
- Transformed data|ARIMA(1,0,0)|ETS(A,N,N)|405.29|437.7586
- Non-transformed data|ARIMA(1,0,0)|ETS(M,N,N)|298.27|331.2937"
-
-df5 <- read.delim(textConnection(my.data5),header = FALSE, sep = "|", 
-                  strip.white = TRUE, stringsAsFactors = FALSE)
-names(df5) <- unname(as.list(df5[1,])) # put headers on
-df5 <- df5[-1,]                        # remove first row
-row.names(df5) <- NULL
-pander(df5, style = 'rmarkdown')
-```
+__<span style="background-color:#FFE1FF;">Comment</span>__: Since the data appears to behave like a white noise series, it was expected that the forecasts didn't come out too well. Though the errors of both models were small, this also indicates that both models might be over-fitting the data. 
 
  
-<br>
+<br><br>
 
 ## To-Do List 
 :::: {.blackbox data-latex=""}
 <ul>
 <li><input type="checkbox"> Perform time series analysis on the data sets basing on Region levels.</li>
 
-<li><input type="checkbox"> Obtain potential predictors that might be correlated to the monthly number of oranges from external sources:
+<li><input type="checkbox"> Decompose annual GDP by region into monthly data.</li>
 
-<input type="checkbox"> Decompose annual GDP by region into monthly data.
-
-<input type="checkbox"> Dummy seasonal (monthly) predictors.
-</li>
+<li><input type="checkbox"> Dummy seasonal (monthly) predictors.</li>
 
 <li><input type="checkbox" checked> Look into other forecasting methods, such as __<span style="color:#000066;">STL-ETS</span>__, __<span style="color:#000066;">NNAR</span>__, __<span style="color:#000066;">TBATS</span>__ and __<span style="color:#000066;">forecast combinations</span>__ (using several different methods on the same time series, and to average the resulting forecasts).</li>
 </ul>
 ::::
 
-<br>
+<br><br>
 
 ## Reference
 
@@ -662,6 +379,8 @@ https://otexts.com/fpp2/
 http://course1.winona.edu/bdeppa/FIN%20335/Handouts/Forecasters_Toolbox__Section_2_and_3.html#example-2---monthly-fastenal-sales-and-number-of-business-days-contd
 
 https://stackoverflow.com/questions/59672182/prediction-interval-level-on-forecast-autoplot
+
+<br>
 
 ```{r, child="_page_built_on.Rmd"}
 ```

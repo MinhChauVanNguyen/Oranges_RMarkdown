@@ -95,11 +95,12 @@ nav#navbar-main li {
   background-color: transparent;
 }
 
+/* box */
 .blackbox {
   padding: 1em;
   background: white;
   color: black;
-  border: 2px solid blue;
+  border: 1px solid #00BFFF;
   border-radius: 10px;
 }
 
@@ -107,9 +108,15 @@ nav#navbar-main li {
   text-align: center;
 }
 
+/* table */
+
 table {
   background-color: white !important;
   color: black !important;
+  border-collapse:separate;
+  border:solid black 1px;
+  -moz-border-radius:3px;
+  -webkit-border-radius:3px;
+  border-radius:3px;
 }
-
 

@@ -17,13 +17,14 @@ output:
 ## Introduction
 
 
-The Orange data consists of 16 Families representing each New Zealand region. Each family data has four columns: **Month**, **Year**, **Member** and **Total**, where **Member** is the number of family members and **Total** is the number of oranges bought recorded at monthly interval. The goal is to predict the number of oranges each family is going to be buying in the next three years using Time Series Analysis. 
+The Orange data consists of 16 Families representing each New Zealand region. Each family data has four columns: **Month**, **Year**, **Member** and **Total**, where **Member** is the number of family members and **Total** is the number of oranges bought recorded at monthly interval. The goal is to predict the number of oranges each family is going to be buying in the next three years using Time Series Analysis. In the following graph (*you can click on the bubbles and drag them around*) representing 10 families from 10 different regions and their total of oranges bought in 2018.
 
 ```{r echo = FALSE, message = FALSE, warning = FALSE}
-library(hpackedbubble)
-library(tidyr)
-library(dplyr)
+source("library.R")
+```
 
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
 orange <- read.csv("oranges.csv", header = TRUE)
 
 bubbledata <- orange %>% filter(Year == 2018) %>% group_by(Region, Name) %>%
@@ -51,12 +52,16 @@ hpackedbubble(cat = head(bubbledata$Region, 10),
 
 <br>
 
+<span style="color:orange; font-weight:bold;">Please note that the Oranges data was generated only for the purpose of education, in demonstrating how Time Series Analysis works, and is not REAL or affiliated with any organization and representing any  individual's family.</span>
+
+<br>
+
 ## Tab Navigation
-1. [Tab One](00-Tab-1.html)
-2. [Tab Two](01-Tab-2.html)
+1. [Tab One](00-Tab-1.html) - First Report
+2. [Tab Two](01-Tab-2.html) - Second Report
 
 
 
-
+<br>
 ```{r, child="_page_built_on.Rmd"}
 ```
